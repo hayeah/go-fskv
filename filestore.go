@@ -12,6 +12,11 @@ import (
 // ErrNotFound is the error returned by getter when a key is not found
 var ErrNotFound = errors.New("fskv: key not found")
 
+// IsNotFound is true if the err is ErrNotFound
+func IsNotFound(err error) bool {
+	return err == ErrNotFound
+}
+
 // FileStoreOptions Config for FileStore
 type FileStoreOptions struct {
 	KeyMapper KeyMapper
