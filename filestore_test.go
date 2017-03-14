@@ -33,7 +33,8 @@ func TestFileStorePut(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		err = fs.Put(c.key, []byte(c.content))
+		key := ShardedHashKey(c.key)
+		err = fs.Put(key, []byte(c.content))
 		assert.NoError(err)
 
 		data, err := ioutil.ReadFile(c.filename)
@@ -62,12 +63,13 @@ func TestFileStoreGet(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		key := ShardedHashKey(c.key)
 		if c.put {
-			err = fs.Put(c.key, []byte(c.content))
+			err = fs.Put(key, []byte(c.content))
 			assert.NoError(err)
 		}
 
-		data, err := fs.Get(c.key)
+		data, err := fs.Get(key)
 
 		if c.put {
 			assert.NoError(err)
@@ -77,7 +79,7 @@ func TestFileStoreGet(t *testing.T) {
 		}
 
 		var w bytes.Buffer
-		err = fs.GetInto(c.key, &w)
+		err = fs.GetInto(key, &w)
 		if c.put {
 			assert.NoError(err)
 			assert.Equal(c.content, string(w.Bytes()))
@@ -101,9 +103,9 @@ func BenchmarkFileStorePutRandom(b *testing.B) {
 	}
 
 	const nkeys = 5000
-	keys := make([]string, nkeys, nkeys)
+	keys := make([]ShardedHashKey, nkeys, nkeys)
 	for i := range keys {
-		keys[i] = randString(10)
+		keys[i] = ShardedHashKey(randString(10))
 	}
 
 	b.ResetTimer()
@@ -130,9 +132,9 @@ func BenchmarkFileStoreGetRandom(b *testing.B) {
 	}
 
 	const nkeys = 200
-	keys := make([]string, nkeys, nkeys)
+	keys := make([]ShardedHashKey, nkeys, nkeys)
 	for i := range keys {
-		keys[i] = randString(10)
+		keys[i] = ShardedHashKey(randString(10))
 	}
 
 	for _, key := range keys {

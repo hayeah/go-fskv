@@ -19,8 +19,6 @@ func IsNotFound(err error) bool {
 
 // FileStoreOptions Config for FileStore
 type FileStoreOptions struct {
-	KeyMapper KeyMapper
-
 	// FileMode is permission bits for stored files
 	FileMode os.FileMode
 
@@ -47,10 +45,6 @@ func NewFileStore(basedir string, options FileStoreOptions) (fs *FileStore, err 
 		options.StorageDirectoryFileMode = 0755
 	}
 
-	if options.KeyMapper == nil {
-		options.KeyMapper = KeymapShardedDirectory
-	}
-
 	basedir = path.Clean(basedir)
 	if basedir != "/" {
 		basedir += "/"
@@ -69,42 +63,29 @@ func NewFileStore(basedir string, options FileStoreOptions) (fs *FileStore, err 
 }
 
 // Put creates a file to store value
-func (fs *FileStore) Put(key string, value []byte) error {
-	filename, err := fs.filename(key)
-	if err != nil {
-		return err
-	}
-	// TODO detect directory error and retry
-	return ioutil.WriteFile(filename, value, fs.Options.FileMode)
-}
+func (fs *FileStore) Put(key Key, value []byte) error {
+	pathname, filename := key.Location()
 
-func (fs *FileStore) filename(key string) (filename string, err error) {
-	km := fs.Options.KeyMapper(key)
-
-	if km.Pathname != "" {
-		storedir := path.Join(fs.basedir, km.Pathname)
-		err = fs.ensureStoreDirectory(storedir)
+	if pathname != "" {
+		storedir := path.Join(fs.basedir, pathname)
+		err := fs.ensureStoreDirectory(storedir)
 		if err != nil {
-			return
+			return err
 		}
-
-		filename = path.Join(storedir, km.Filename)
-	} else {
-		filename = fs.basedir + km.Filename
 	}
 
-	return
+	storefile := path.Join(fs.basedir, pathname, filename)
+
+	// TODO detect directory error and retry
+	return ioutil.WriteFile(storefile, value, fs.Options.FileMode)
 }
 
 // Get returns the content for a key. Returns NotExist error if key is not found.
-func (fs *FileStore) Get(key string) (data []byte, err error) {
-	filename, err := fs.filename(key)
-	if err != nil {
-		return nil, err
-	}
+func (fs *FileStore) Get(key Key) (data []byte, err error) {
+	pathname, filename := key.Location()
+	storefile := path.Join(fs.basedir, pathname, filename)
 
-	// TODO dedicated error for not found
-	data, err = ioutil.ReadFile(filename)
+	data, err = ioutil.ReadFile(storefile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, ErrNotFound
@@ -116,13 +97,11 @@ func (fs *FileStore) Get(key string) (data []byte, err error) {
 }
 
 // GetInto reads the content for a key into a writer. Returns NotExist error if key is not found.
-func (fs *FileStore) GetInto(key string, w io.Writer) (err error) {
-	filename, err := fs.filename(key)
-	if err != nil {
-		return
-	}
+func (fs *FileStore) GetInto(key Key, w io.Writer) (err error) {
+	pathname, filename := key.Location()
+	storefile := path.Join(fs.basedir, pathname, filename)
 
-	f, err := os.Open(filename)
+	f, err := os.Open(storefile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return ErrNotFound
