@@ -86,6 +86,17 @@ func TestFileStoreGet(t *testing.T) {
 		} else {
 			assert.Equal(err, ErrNotFound)
 		}
+
+		f, err := fs.GetFile(key)
+		if c.put {
+			assert.NoError(err)
+			data, err = ioutil.ReadAll(f)
+			assert.NoError(err)
+			assert.Equal(c.content, string(data))
+			f.Close()
+		} else {
+			assert.Equal(err, ErrNotFound)
+		}
 	}
 }
 

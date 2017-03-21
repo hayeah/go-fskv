@@ -96,6 +96,21 @@ func (fs *FileStore) Get(key Key) (data []byte, err error) {
 	return
 }
 
+// GetFile returns the underlying file for a key. Returns NotExist error if key is not found.
+func (fs *FileStore) GetFile(key Key) (f *os.File, err error) {
+	pathname, filename := key.Location()
+	storefile := path.Join(fs.basedir, pathname, filename)
+
+	f, err = os.Open(storefile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNotFound
+		}
+	}
+
+	return
+}
+
 // GetInto reads the content for a key into a writer. Returns NotExist error if key is not found.
 func (fs *FileStore) GetInto(key Key, w io.Writer) (err error) {
 	pathname, filename := key.Location()
