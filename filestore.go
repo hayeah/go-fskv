@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 )
 
 // ErrNotFound is the error returned by getter when a key is not found
@@ -30,9 +31,10 @@ type storedirChecks map[string]bool
 
 // FileStore stores key values on the file system
 type FileStore struct {
-	basedir        string
-	storedirChecks storedirChecks
-	Options        FileStoreOptions
+	basedir            string
+	storedirChecks     storedirChecks
+	storedirChecksLock sync.Mutex
+	Options            FileStoreOptions
 }
 
 // NewFileStore returns a new FileStore
@@ -130,6 +132,8 @@ func (fs *FileStore) GetInto(key Key, w io.Writer) (err error) {
 }
 
 func (fs *FileStore) ensureStoreDirectory(storedir string) error {
+	fs.storedirChecksLock.Lock()
+	defer fs.storedirChecksLock.Unlock()
 	_, ok := fs.storedirChecks[storedir]
 
 	if ok {
